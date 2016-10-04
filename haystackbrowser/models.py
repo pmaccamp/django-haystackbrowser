@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 import logging
 from copy import deepcopy
+
 try:
     from urllib import quote_plus
 except ImportError:  # > Python 3
     from django.utils.six.moves.urllib import parse
+
     quote_plus = parse.quote_plus
 from operator import itemgetter
 from itertools import groupby
 from collections import namedtuple
 from django.db import models
+
 try:
     from django.utils.encoding import force_text
 except ImportError:  # < Django 1.5
@@ -23,7 +26,6 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-
 class HaystackResults(models.Model):
     """ Our fake model, used for mounting :py:class:`~haystackbrowser.admin.HaystackResultsAdmin`
     onto the appropriate AdminSite.
@@ -32,6 +34,7 @@ class HaystackResults(models.Model):
 
         the model is marked as unmanaged, so will never get created via ``syncdb``.
     """
+
     class Meta:
         managed = False
         verbose_name = _('Search result')
@@ -49,6 +52,7 @@ class SearchResultWrapper(object):
     :type admin_site: AdminSite object
 
     """
+
     def __init__(self, obj, admin_site=None):
         self.admin = admin_site
         self.object = obj
@@ -56,7 +60,6 @@ class SearchResultWrapper(object):
             # < Haystack 1.2
             from haystack import site
             self.object.searchindex = site.get_index(self.object.model)
-
 
     def __repr__(self):
         return '<%(module)s.%(cls)s [%(app)s.%(model)s pk=%(pk)r]>' % {
@@ -178,6 +181,14 @@ class SearchResultWrapper(object):
         """
         return getattr(self.object, self.get_content_field())
 
+    def get_content_for_field(self, field):
+        """Given the name of the a content field in the Haystack Search Index
+         for this object, get the named attribute on this object.
+
+         :return: whatever is in ``self.object.field``
+        """
+        return getattr(self.object, field)
+
     def get_stored_field_count(self):
         """
         Provides mechanism for finding the number of stored fields stored on
@@ -224,12 +235,12 @@ class FacetWrapper(object):
     def __repr__(self):
         return '<%(module)s.%(cls)s fields=%(fields)r dates=%(dates)r ' \
                'queries=%(queries)r>' % {
-            'module': self.__class__.__module__,
-            'cls': self.__class__.__name__,
-            'fields': self.fields,
-            'dates': self.dates,
-            'queries': self.queries,
-        }
+                   'module': self.__class__.__module__,
+                   'cls': self.__class__.__name__,
+                   'fields': self.fields,
+                   'dates': self.dates,
+                   'queries': self.queries,
+               }
 
     def get_facets_from(self, x):
         if x not in ('dates', 'queries', 'fields'):
@@ -245,7 +256,7 @@ class FacetWrapper(object):
 
     def get_grouped_facets_from(self, x):
         data = sorted(self.get_facets_from(x), key=itemgetter('field'))
-        #return data
+        # return data
         results = ({'grouper': Facet(key), 'list': list(val)}
                    for key, val in groupby(data, key=itemgetter('field')))
         return results
@@ -265,6 +276,7 @@ class FacetWrapper(object):
         method; __nonzero__ is the equivalent thing in Python 3
         """
         return self._total_count > 0
+
     __nonzero__ = __bool__
 
     def __len__(self):
@@ -276,6 +288,7 @@ class FacetWrapper(object):
 
 class AppliedFacet(namedtuple('AppliedFacet', 'field value querydict')):
     __slots__ = ()
+
     def title(self):
         return self.value
 
@@ -359,6 +372,7 @@ class Facet(object):
     """
 
     __slots__ = ('fieldname', '_querydict')
+
     def __init__(self, fieldname, querydict=None):
         self.fieldname = fieldname
         self._querydict = querydict

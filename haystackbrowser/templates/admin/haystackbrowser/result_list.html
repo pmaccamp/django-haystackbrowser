@@ -77,6 +77,11 @@
                 {{ form.models }}
             </div>
 
+            <h3>Content field</h3>
+            <div class="haystackbrowser-possible-template-fields-list">
+                {{ form.content_field }}
+            </div>
+
             {% if form.possible_facets.field.choices|length > 0 %}
             <h3>{{ form.possible_facets.label }}</h3>
             <div class="haystackbrowser-possible-facets-list">
@@ -127,7 +132,7 @@
             <tbody>
                 {% for result in results %}
                 <tr class="{% cycle 'row1' 'row2' %}">
-                    {% include "admin/haystackbrowser/result.html" with result=result request=request filtered=filtered search_form=form only %}
+                    {% include "admin/haystackbrowser/result.html" with result=result content_field=content_field request=request filtered=filtered search_form=form only %}
                 </tr>
                 {% endfor %}
             </tbody>

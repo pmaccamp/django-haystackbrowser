@@ -5,16 +5,28 @@ from django.template.defaultfilters import yesno
 from django.forms import (MultipleChoiceField, CheckboxSelectMultiple,
                           ChoiceField, HiddenInput, IntegerField)
 from django.utils.translation import ugettext_lazy as _
+from haystack import DEFAULT_ALIAS
+from haystack import connections
+from haystack.inputs import AutoQuery
+
 try:
     from django.forms.utils import ErrorDict
-except ImportError: # < Django 1.8
+except ImportError:  # < Django 1.8
     from django.forms.util import ErrorDict
 from haystack.forms import ModelSearchForm, model_choices
 from haystackbrowser.models import AppliedFacets, Facet
 from haystackbrowser.utils import HaystackConfig
 
-
 logger = logging.getLogger(__name__)
+
+
+def content_field_choices(using=DEFAULT_ALIAS):
+    fields = [("text", "text")]
+
+    for fieldname, field_object in connections[using].get_unified_index().all_searchfields().items():
+        if field_object.use_template and not field_object.document:
+            fields.append((fieldname, fieldname))
+    return fields
 
 
 class SelectedFacetsField(MultipleChoiceField):
@@ -44,6 +56,8 @@ class PreSelectedModelSearchForm(ModelSearchForm):
     possible_facets = MultipleChoiceField(widget=CheckboxSelectMultiple,
                                           choices=(), required=False,
                                           label=_("Finding facets on"))
+    content_field = ChoiceField(choices=(), required=False,
+                                label=_("Indexed fields"))
     connection = ChoiceField(choices=(), required=False)
     p = IntegerField(required=False, label=_("Page"), min_value=0,
                      max_value=99999999, initial=1)
@@ -58,13 +72,14 @@ class PreSelectedModelSearchForm(ModelSearchForm):
             self.fields['models'].label = _("Only models")
         self.haystack_config = HaystackConfig()
 
+        self.fields['content_field'].choices = content_field_choices()
+
         self.version = self.haystack_config.version
         if self.should_allow_faceting():
             possible_facets = self.configure_faceting()
             self.fields['possible_facets'].choices = possible_facets
             self.fields['selected_facets'] = SelectedFacetsField(
                 choices=(), required=False, possible_facets=possible_facets)
-
 
         if self.has_multiple_connections():
             wtf = self.get_possible_connections()
@@ -100,14 +115,14 @@ class PreSelectedModelSearchForm(ModelSearchForm):
         return '<%(module)s.%(cls)s bound=%(is_bound)s valid=%(valid)s ' \
                'version=%(version)d multiple_connections=%(conns)s ' \
                'supports_faceting=%(facets)s>' % {
-            'module': self.__class__.__module__,
-            'cls': self.__class__.__name__,
-            'is_bound': yesno(self.is_bound),
-            'conns': yesno(self.has_multiple_connections()),
-            'facets': yesno(self.should_allow_faceting()),
-            'valid': yesno(is_valid),
-            'version': self.haystack_config.version,
-        }
+                   'module': self.__class__.__module__,
+                   'cls': self.__class__.__name__,
+                   'is_bound': yesno(self.is_bound),
+                   'conns': yesno(self.has_multiple_connections()),
+                   'facets': yesno(self.should_allow_faceting()),
+                   'valid': yesno(is_valid),
+                   'version': self.haystack_config.version,
+               }
 
     def no_query_found(self):
         """
@@ -145,9 +160,10 @@ class PreSelectedModelSearchForm(ModelSearchForm):
         if len(only_models) > 0:
             sqs = sqs.models(*only_models)
 
+        content_field = cleaned_data.get('content_field', 'content')
         query = cleaned_data.get('q', [''])
         if query:
-            sqs = sqs.auto_query(*query)
+            sqs = sqs.auto_query(*query, fieldname=content_field)
 
         if self.load_all:
             sqs = sqs.load_all()

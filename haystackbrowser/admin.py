@@ -348,6 +348,7 @@ class HaystackResultsAdmin(object):
 
         query = request.GET.get(self.get_search_var(request), None)
         connection = request.GET.get('connection', None)
+        content_field = request.GET.get('content_field', None)
         title = self.model._meta.verbose_name_plural
 
         wrapped_facets = FacetWrapper(
@@ -355,6 +356,7 @@ class HaystackResultsAdmin(object):
 
         context = {
             'results': self.get_wrapped_search_results(page.object_list),
+            'content_field': content_field,
             'pagination_required': page.has_other_pages(),
             # this may be expanded into xrange(*page_range) to copy what
             # the paginator would yield. This prevents 50000+ pages making
@@ -420,9 +422,9 @@ class HaystackResultsAdmin(object):
         # the model may no longer be in the database, instead being only backed
         # by the search backend.
         model_instance = sqs.object.object
-        if model_instance is not None:
-            raw_mlt = SearchQuerySet().more_like_this(model_instance)[:5]
-            more_like_this = self.get_wrapped_search_results(raw_mlt)
+        # if model_instance is not None:
+        #     raw_mlt = SearchQuerySet().more_like_this(model_instance)[:5]
+        #     more_like_this = self.get_wrapped_search_results(raw_mlt)
 
         form = PreSelectedModelSearchForm(request.GET or None, load_all=False)
         form_valid = form.is_valid()
