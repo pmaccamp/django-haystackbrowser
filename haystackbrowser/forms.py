@@ -161,8 +161,8 @@ class PreSelectedModelSearchForm(ModelSearchForm):
             sqs = sqs.models(*only_models)
 
         content_field = cleaned_data.get('content_field', 'content')
-        query = cleaned_data.get('q', [''])
-        if query:
+        query = cleaned_data.get('q', None)
+        if query and query[0]:
             sqs = sqs.auto_query(*query, fieldname=content_field)
 
         if self.load_all:
