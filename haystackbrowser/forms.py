@@ -7,7 +7,6 @@ from django.forms import (MultipleChoiceField, CheckboxSelectMultiple,
 from django.utils.translation import ugettext_lazy as _
 from haystack import DEFAULT_ALIAS
 from haystack import connections
-from haystack.inputs import AutoQuery
 
 try:
     from django.forms.utils import ErrorDict

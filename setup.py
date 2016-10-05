@@ -100,6 +100,7 @@ setup(
         'Django>=1.3.1',
         'django-haystack>=1.2.0',
         'django-classy-tags>=0.3.4.1',
+        'json2html>=1.0.1'
     ],
     tests_require=[
         'django-haystack>=1.2.0',

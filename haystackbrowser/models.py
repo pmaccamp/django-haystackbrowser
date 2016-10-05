@@ -154,6 +154,7 @@ class SearchResultWrapper(object):
         additional_fields = {}
         stored_fields = self.get_stored_fields().keys()
         model_attrs = self.get_model_attrs()
+
         for key, value in self.object.get_additional_fields().items():
             if key not in stored_fields:
                 safe_value = force_text(value).strip()

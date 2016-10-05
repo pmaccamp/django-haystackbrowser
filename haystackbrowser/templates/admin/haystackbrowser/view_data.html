@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n haystackbrowser_json %}
 <div id="content-main">
     <form>
         <fieldset class="module aligned">
@@ -58,6 +58,25 @@
             {% empty %}
                 <div class="form-row errors">
                     <p class="help">{% trans "No additional fields found" %}</p>
+                </div>
+            {% endfor %}
+        </fieldset>
+        <fieldset class="module aligned">
+            <h2>
+                Term Vectors
+            </h2>
+            <div class="description">
+                Data returned from the <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-multi-termvectors.html">Search Result's term vectors</a>.
+            </div>
+            {% for key, value in term_vectors.items %}
+                <div class="form-row form-row-preview field-termvector-{{ key }}">
+                    <label for="field-termvector-{{ key }}">{{ key }}</label>
+                    {% format_json_to_html value as html_value %}
+                    <div id="field-termvector-{{ key }}">{{ html_value|safe }} &nbsp;</div>
+                </div>
+            {% empty %}
+                <div class="form-row errors">
+                    <p class="help">{% trans "No term vectors found" %}</p>
                 </div>
             {% endfor %}
         </fieldset>

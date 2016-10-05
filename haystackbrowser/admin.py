@@ -1,21 +1,25 @@
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, InvalidPage
 from haystack.exceptions import SearchBackendError
+
 try:
     from django.utils.encoding import force_text
 except ImportError:  # < Django 1.5
     from django.utils.encoding import force_unicode as force_text
 from django.utils.translation import ugettext_lazy as _
 from django.http import Http404, HttpResponseRedirect
+
 try:
     from functools import update_wrapper
 except ImportError:  # < Django 1.6
     from django.utils.functional import update_wrapper
 try:
     from django.template.response import TemplateResponse
+
     UPGRADED_RENDER = True
 except ImportError:  # Some old Django, which gets worse renderers
     from django.shortcuts import render_to_response
+
     UPGRADED_RENDER = False
 from django.template import RequestContext
 from django.contrib import admin
@@ -29,6 +33,8 @@ from haystackbrowser.models import HaystackResults, SearchResultWrapper, FacetWr
 from haystackbrowser.forms import PreSelectedModelSearchForm
 from haystackbrowser.utils import get_haystack_settings
 from django.forms import Media
+from elasticsearch import Elasticsearch
+
 try:
     from haystack.constants import DJANGO_CT, DJANGO_ID
 except ImportError:  # really old haystack, early in 1.2 series?
@@ -36,6 +42,7 @@ except ImportError:  # really old haystack, early in 1.2 series?
     DJANGO_ID = 'django_id'
 
 _haystack_version = '.'.join([str(x) for x in __version__])
+
 
 def get_query_string(query_params, new_params=None, remove=None):
     # TODO: make this bettererer. Use propery dicty stuff on the Querydict?
@@ -59,6 +66,7 @@ def get_query_string(query_params, new_params=None, remove=None):
 
 class FakeChangeListForPaginator(object):
     """A value object to contain attributes required for Django's pagination template tag."""
+
     def __init__(self, request, page, per_page, model_opts):
         self.paginator = page.paginator
         self.page_num = page.number - 1
@@ -171,10 +179,10 @@ class HaystackResultsAdmin(object):
             # < 1.5
             from django.conf.urls.defaults import patterns, url
 
-
         def wrap(view):
             def wrapper(*args, **kwargs):
                 return self.admin_site.admin_view(view)(*args, **kwargs)
+
             return update_wrapper(wrapper, view)
 
         if hasattr(self.model._meta, 'model_name'):
@@ -183,17 +191,18 @@ class HaystackResultsAdmin(object):
             model_key = self.model._meta.module_name
 
         return patterns('',
-            url(regex=r'^(?P<content_type>.+)/(?P<pk>.+)/$',
-                view=wrap(self.view),
-                name='%s_%s_change' % (self.model._meta.app_label,
-                                       model_key)
-            ),
-            url(regex=r'^$',
-                view=wrap(self.index),
-                name='%s_%s_changelist' % (self.model._meta.app_label,
-                                           model_key)
-            ),
-        )
+                        url(regex=r'^(?P<content_type>.+)/(?P<pk>.+)/$',
+                            view=wrap(self.view),
+                            name='%s_%s_change' % (self.model._meta.app_label,
+                                                   model_key)
+                            ),
+                        url(regex=r'^$',
+                            view=wrap(self.index),
+                            name='%s_%s_changelist' % (self.model._meta.app_label,
+                                                       model_key)
+                            ),
+                        )
+
     urls = property(urls)
 
     def get_results_per_page(self, request):
@@ -276,8 +285,6 @@ class HaystackResultsAdmin(object):
         """
         return get_haystack_settings()
 
-
-
     def do_render(self, request, template_name, context):
         if UPGRADED_RENDER:
             return TemplateResponse(request=request, template=template_name,
@@ -339,7 +346,7 @@ class HaystackResultsAdmin(object):
         results_per_page = self.get_results_per_page(request)
         paginator = Paginator(sqs, results_per_page)
         try:
-            page = paginator.page(page_no+1)
+            page = paginator.page(page_no + 1)
         except (InvalidPage, ValueError):
             # paginator.page may raise InvalidPage if we've gone too far
             # meanwhile, casting the querystring parameter may raise ValueError
@@ -429,6 +436,13 @@ class HaystackResultsAdmin(object):
         form = PreSelectedModelSearchForm(request.GET or None, load_all=False)
         form_valid = form.is_valid()
 
+        es = Elasticsearch()
+        term_vectors = es.termvectors(index="haystack", doc_type="modelresult", id=content_type + "." + str(pk))["term_vectors"]
+
+        for index_key in term_vectors:
+            for key, value in term_vectors[index_key]["terms"].items():
+                term_vectors[index_key]["terms"][key] = term_vectors[index_key]["terms"][key]["term_freq"]
+
         context = {
             'original': sqs,
             'title': _('View stored data for this %s') % force_text(sqs.verbose_name),
@@ -438,10 +452,13 @@ class HaystackResultsAdmin(object):
             'has_change_permission': self.has_change_permission(request, sqs),
             'similar_objects': more_like_this,
             'haystack_version': _haystack_version,
+            'term_vectors': term_vectors,
             'form': form,
             'form_valid': form_valid,
         }
         return self.do_render(request=request,
                               template_name='admin/haystackbrowser/view.html',
                               context=context)
+
+
 admin.site.register(HaystackResults, HaystackResultsAdmin)
