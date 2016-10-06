@@ -353,8 +353,6 @@ class HaystackResultsAdmin(object):
             # if it's None, or '', or other silly input.
             raise Search404("Invalid page")
 
-        query = request.GET.get(self.get_search_var(request), None)
-        connection = request.GET.get('connection', None)
         content_field = request.GET.get('content_field', None)
         title = self.model._meta.verbose_name_plural
 
@@ -438,10 +436,6 @@ class HaystackResultsAdmin(object):
 
         es = Elasticsearch()
         term_vectors = es.termvectors(index="haystack", doc_type="modelresult", id=content_type + "." + str(pk))["term_vectors"]
-
-        for index_key in term_vectors:
-            for key, value in term_vectors[index_key]["terms"].items():
-                term_vectors[index_key]["terms"][key] = term_vectors[index_key]["terms"][key]["term_freq"]
 
         context = {
             'original': sqs,
