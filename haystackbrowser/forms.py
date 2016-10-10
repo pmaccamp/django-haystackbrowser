@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 def content_field_choices(using=DEFAULT_ALIAS):
-    fields = [("text", "text")]
+    fields = []
 
     for fieldname, field_object in connections[using].get_unified_index().all_searchfields().items():
-        if field_object.use_template and not field_object.document:
+        if field_object.use_template or field_object.document:
             fields.append((fieldname, fieldname))
     return fields
 
