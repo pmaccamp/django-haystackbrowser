@@ -1,5 +1,5 @@
 {% extends "admin/change_list.html" %}
-{% load i18n admin_list %}
+{% load i18n admin_list haystackbrowser_json %}
 {% if not is_popup %}
   {% block breadcrumbs %}
     <div class="breadcrumbs">
@@ -40,6 +40,16 @@
         {% endfor %}
     </ul>
     {% endif %}
+
+    {% if query_analysis %}
+    <h3>Query breakdown</h3>
+    {{ request.GET.q }}<br/>
+    {% format_json_to_html query_analysis as query_analysis_html %}
+    <div>{{ query_analysis_html|safe }}</div>
+    <br/>
+    <br/>
+    {% endif %}
+
     <div class="module {% if filtered %}filtered{% endif %}" id="changelist">
         {% block search %}{% endblock search %}
         {% if applied_facets %}

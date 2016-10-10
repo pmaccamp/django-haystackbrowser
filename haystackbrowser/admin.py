@@ -356,6 +356,13 @@ class HaystackResultsAdmin(object):
         content_field = request.GET.get('content_field', None)
         title = self.model._meta.verbose_name_plural
 
+        query = cleaned_GET.get("q", None)
+        query_analysis = None
+        if query:
+            es = Elasticsearch()
+            analyzer = getattr(settings, "HAYSTACKBROWSER_QUERY_ANALYZER", "standard")
+            query_analysis = es.indices.analyze(index="haystack", text=query, analyzer=analyzer, explain=False)
+
         wrapped_facets = FacetWrapper(
             sqs.facet_counts(), querydict=form.cleaned_data_querydict.copy())
 
@@ -375,6 +382,7 @@ class HaystackResultsAdmin(object):
             'app_label': self.model._meta.app_label,
             'filtered': True,
             'form': form,
+            'query_analysis': query_analysis,
             'form_valid': form.is_valid(),
             'query_string': self.get_current_query_string(request, remove=[page_var]),
             'search_model_count': len(cleaned_GET.getlist('models')),
@@ -435,7 +443,19 @@ class HaystackResultsAdmin(object):
         form_valid = form.is_valid()
 
         es = Elasticsearch()
-        term_vectors = es.termvectors(index="haystack", doc_type="modelresult", id=content_type + "." + str(pk))["term_vectors"]
+        term_vectors = es.termvectors(index="haystack", doc_type="modelresult", id=content_type + "." + str(pk))[
+            "term_vectors"]
+
+        query = request.GET.get("q", None)
+        query_explanation = None
+
+        # wasn't easy to understand but may be useful at some point
+        if query:
+            analyzer = getattr(settings, "HAYSTACKBROWSER_QUERY_ANALYZER", "standard")
+            print request.GET.get("content_field", "content")
+            query_explanation = es.explain(index="haystack", doc_type="modelresult", id=content_type + "." + str(pk),
+                                           df=request.GET.get("content_field", "content"), q=query, analyzer=analyzer)
+            print query_explanation
 
         context = {
             'original': sqs,
@@ -447,6 +467,7 @@ class HaystackResultsAdmin(object):
             'similar_objects': more_like_this,
             'haystack_version': _haystack_version,
             'term_vectors': term_vectors,
+            "query_explanation": query_explanation,
             'form': form,
             'form_valid': form_valid,
         }

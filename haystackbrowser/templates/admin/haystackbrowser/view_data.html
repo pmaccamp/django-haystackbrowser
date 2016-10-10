@@ -80,6 +80,22 @@
                 </div>
             {% endfor %}
         </fieldset>
+
+    {% if query_explanation %}
+        <fieldset>
+            <h2>
+                Query Explanation
+            </h2>
+            <div class="description">
+                Data returned from the <a href="http://www.elastic.co/guide/en/elasticsearch/reference/current/search-explain.html">Explain API</a> which computes a score explanation for a query and a specific document. .
+            </div>
+            <div class="form-row form-row-preview field-query-explanation">
+                {% format_json_to_html query_explanation as query_explanation_html %}
+                {{ query_explanation_html|safe }}
+            </div>
+        </fieldset>
+    {% endif %}
+
         <fieldset class="module aligned">
             <h2>
                 {% blocktrans with haystack_version as version %}

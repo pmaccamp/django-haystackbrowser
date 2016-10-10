@@ -159,10 +159,10 @@ class PreSelectedModelSearchForm(ModelSearchForm):
         if len(only_models) > 0:
             sqs = sqs.models(*only_models)
 
-        content_field = cleaned_data.get('content_field', 'content')
+        content_field = cleaned_data.get('content_field', ['content'])
         query = cleaned_data.get('q', None)
         if query and query[0]:
-            sqs = sqs.auto_query(*query, fieldname=content_field)
+            sqs = sqs.auto_query(*query, fieldname=content_field[0])
 
         if self.load_all:
             sqs = sqs.load_all()
@@ -180,6 +180,9 @@ class PreSelectedModelSearchForm(ModelSearchForm):
 
     def clean_q(self):
         return [self.cleaned_data.get('q', '')]
+
+    def clean_content_field(self):
+        return [self.cleaned_data.get('content_field', '')]
 
     def clean_p(self):
         page = self.cleaned_data.get('p', None)
@@ -205,6 +208,7 @@ class PreSelectedModelSearchForm(ModelSearchForm):
         self._clean_fields()
         self._clean_form()
         self._post_clean()
+        print self.cleaned_data
 
     def clean(self):
         cd = self.cleaned_data
