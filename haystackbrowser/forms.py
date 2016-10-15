@@ -208,7 +208,6 @@ class PreSelectedModelSearchForm(ModelSearchForm):
         self._clean_fields()
         self._clean_form()
         self._post_clean()
-        print self.cleaned_data
 
     def clean(self):
         cd = self.cleaned_data

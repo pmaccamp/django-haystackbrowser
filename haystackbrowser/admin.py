@@ -452,10 +452,8 @@ class HaystackResultsAdmin(object):
         # wasn't easy to understand but may be useful at some point
         if query:
             analyzer = getattr(settings, "HAYSTACKBROWSER_QUERY_ANALYZER", "standard")
-            print request.GET.get("content_field", "content")
             query_explanation = es.explain(index="haystack", doc_type="modelresult", id=content_type + "." + str(pk),
                                            df=request.GET.get("content_field", "content"), q=query, analyzer=analyzer)
-            print query_explanation
 
         context = {
             'original': sqs,
