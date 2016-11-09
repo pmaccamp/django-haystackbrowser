@@ -86,6 +86,16 @@
             <h2>
                 Query Explanation
             </h2>
+            {% if query_analysis %}
+            <div style="display: inline-block">
+                <h3>Query breakdown</h3>
+                {{ query_string }}<br/>
+                Analyzer: {{ analyzer }}<br/>
+                {% format_json_to_html query_analysis as query_analysis_html %}
+                <div>{{ query_analysis_html|safe }}</div>
+                <br/>
+            </div>
+            {% endif %}
             <div class="description">
                 Data returned from the <a href="http://www.elastic.co/guide/en/elasticsearch/reference/current/search-explain.html">Explain API</a> which computes a score explanation for a query and a specific document. .
             </div>

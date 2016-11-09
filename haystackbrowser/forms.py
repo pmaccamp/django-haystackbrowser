@@ -7,6 +7,7 @@ from django.forms import (MultipleChoiceField, CheckboxSelectMultiple,
 from django.utils.translation import ugettext_lazy as _
 from haystack import DEFAULT_ALIAS
 from haystack import connections
+from haystack.inputs import Exact
 
 try:
     from django.forms.utils import ErrorDict
@@ -55,11 +56,11 @@ class PreSelectedModelSearchForm(ModelSearchForm):
     possible_facets = MultipleChoiceField(widget=CheckboxSelectMultiple,
                                           choices=(), required=False,
                                           label=_("Finding facets on"))
-    content_field = ChoiceField(choices=(), required=False,
-                                label=_("Indexed fields"))
+    search_type = ChoiceField(choices=[(0, "Autoquery"), (1, "Exact")], required=False, initial=0,
+                              label=_("Search type"))
+    content_field = ChoiceField(choices=(), required=False, label=_("Indexed fields"))
     connection = ChoiceField(choices=(), required=False)
-    p = IntegerField(required=False, label=_("Page"), min_value=0,
-                     max_value=99999999, initial=1)
+    p = IntegerField(required=False, label=_("Page"), min_value=0, max_value=99999999, initial=1)
 
     def __init__(self, *args, **kwargs):
         """
@@ -163,7 +164,13 @@ class PreSelectedModelSearchForm(ModelSearchForm):
 
         query = cleaned_data.get('q', None)
         if query and query[0]:
-            sqs = sqs.auto_query(*query, fieldname=content_field[0])
+            if cleaned_data.get("search_type", 0) == "1":
+                kwargs = {
+                    content_field[0]: Exact(*query)
+                }
+                sqs = sqs.filter(**kwargs)
+            else:
+                sqs = sqs.auto_query(*query, fieldname=content_field[0])
 
         if self.load_all:
             sqs = sqs.load_all()

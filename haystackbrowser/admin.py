@@ -293,6 +293,42 @@ class HaystackResultsAdmin(object):
             return render_to_response(template_name=template_name, context=context,
                                       context_instance=RequestContext(request))
 
+    def get_field_mapping(self, field):
+        try:
+            es = Elasticsearch()
+            field_mapping_json = es.indices.get_field_mapping(index="haystack", fields=field)
+            return field_mapping_json["haystack"]["mappings"]["modelresult"][field]["mapping"]
+        except Exception:
+            pass
+
+        return None
+
+    def get_query_analzyer(self, field_mapping, content_field):
+        analyzer = getattr(settings, "HAYSTACKBROWSER_QUERY_ANALYZER", "standard")
+
+        if field_mapping and 'search_analyzer' in field_mapping[content_field]:
+            analyzer = field_mapping[content_field]['search_analyzer']
+        elif field_mapping and 'analyzer' in field_mapping[content_field]:
+            analyzer = field_mapping[content_field]['analyzer']
+
+        return analyzer
+
+    def get_query_analysis(self, query, field_mapping, content_field, query_field):
+        query_analysis = None
+        if query:
+            es = Elasticsearch()
+
+            if field_mapping and 'search_analyzer' in field_mapping[content_field]:
+                analyzer = field_mapping[content_field]['search_analyzer']
+                query_analysis = es.indices.analyze(index="haystack", text=query, analyzer=analyzer, explain=False)
+            elif field_mapping and 'analyzer' in field_mapping[content_field]:
+                analyzer = field_mapping[content_field]['analyzer']
+                query_analysis = es.indices.analyze(index="haystack", text=query, analyzer=analyzer, explain=False)
+            else:
+                query_analysis = es.indices.analyze(index="haystack", text=query, field=query_field, explain=False)
+
+        return query_analysis
+
     def index(self, request):
         """The view for showing all the results in the Haystack index. Emulates
         the standard Django ChangeList mostly.
@@ -357,27 +393,10 @@ class HaystackResultsAdmin(object):
         title = self.model._meta.verbose_name_plural
 
         query = cleaned_GET.get("q", None)
-        query_analysis = None
-        field_mapping = None
-        analyzer = getattr(settings, "HAYSTACKBROWSER_QUERY_ANALYZER", "standard")
-        if query:
-            query_field = content_field if content_field else 'content'
-            es = Elasticsearch()
-
-            try:
-                field_mapping_json = es.indices.get_field_mapping(index="haystack", fields=query_field)
-                field_mapping = field_mapping_json["haystack"]["mappings"]["modelresult"][query_field]["mapping"]
-            except Exception:
-                pass
-
-            if field_mapping and 'search_analyzer' in field_mapping[content_field]:
-                analyzer = field_mapping[content_field]['search_analyzer']
-                query_analysis = es.indices.analyze(index="haystack", text=query, analyzer=analyzer, explain=False)
-            elif field_mapping and 'analyzer' in field_mapping[content_field]:
-                analyzer = field_mapping[content_field]['analyzer']
-                query_analysis = es.indices.analyze(index="haystack", text=query, analyzer=analyzer, explain=False)
-            else:
-                query_analysis = es.indices.analyze(index="haystack", text=query, field=query_field, explain=False)
+        query_field = content_field if content_field else 'content'
+        field_mapping = self.get_field_mapping(query_field)
+        query_analysis = self.get_query_analysis(query, field_mapping, content_field, query_field)
+        analyzer = self.get_query_analzyer(field_mapping, content_field)
 
         wrapped_facets = FacetWrapper(
             sqs.facet_counts(), querydict=form.cleaned_data_querydict.copy())
@@ -465,13 +484,24 @@ class HaystackResultsAdmin(object):
             "term_vectors"]
 
         query = request.GET.get("q", None)
+        content_field = request.GET.get('content_field', 'content')
+
+        query_string = content_field + ':(' + query + ")"
+        if request.GET.get("search_type", 0) == "1":
+            query_string = content_field + ':"' + query + '"'
+
+        query_field = content_field if content_field else 'content'
+        field_mapping = self.get_field_mapping(query_field)
+        query_analysis = self.get_query_analysis(query, field_mapping, content_field, query_field)
+        analyzer = self.get_query_analzyer(field_mapping, content_field)
+
         query_explanation = None
 
         # wasn't easy to understand but may be useful at some point
         if query:
-            analyzer = getattr(settings, "HAYSTACKBROWSER_QUERY_ANALYZER", "standard")
             query_explanation = es.explain(index="haystack", doc_type="modelresult", id=content_type + "." + str(pk),
-                                           df=request.GET.get("content_field", "content"), q=query, analyzer=analyzer)
+                                           q=query_string, analyzer=analyzer,
+                                           default_operator= getattr(settings, "HAYSTACK_DEFAULT_OPERATOR", "OR"))
 
         context = {
             'original': sqs,
@@ -484,6 +514,9 @@ class HaystackResultsAdmin(object):
             'haystack_version': _haystack_version,
             'term_vectors': term_vectors,
             "query_explanation": query_explanation,
+            'query_analysis': query_analysis,
+            'query_string': query_string,
+            'analyzer': analyzer,
             'form': form,
             'form_valid': form_valid,
         }
