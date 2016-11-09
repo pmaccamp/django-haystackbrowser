@@ -358,10 +358,19 @@ class HaystackResultsAdmin(object):
 
         query = cleaned_GET.get("q", None)
         query_analysis = None
+        field_mapping = None
+        analyzer = getattr(settings, "HAYSTACKBROWSER_QUERY_ANALYZER", "standard")
         if query:
+            query_field = content_field if content_field else 'content'
             es = Elasticsearch()
-            analyzer = getattr(settings, "HAYSTACKBROWSER_QUERY_ANALYZER", "standard")
-            query_analysis = es.indices.analyze(index="haystack", text=query, analyzer=analyzer, explain=False)
+
+            try:
+                field_mapping_json = es.indices.get_field_mapping(index="haystack", fields=query_field)
+                field_mapping = field_mapping_json["haystack"]["mappings"]["modelresult"][query_field]["mapping"]
+            except Exception:
+                pass
+
+            query_analysis = es.indices.analyze(index="haystack", text=query, field=query_field, explain=False)
 
         wrapped_facets = FacetWrapper(
             sqs.facet_counts(), querydict=form.cleaned_data_querydict.copy())
@@ -383,6 +392,7 @@ class HaystackResultsAdmin(object):
             'filtered': True,
             'form': form,
             'query_analysis': query_analysis,
+            'field_mapping': field_mapping,
             'form_valid': form.is_valid(),
             'query_string': self.get_current_query_string(request, remove=[page_var]),
             'search_model_count': len(cleaned_GET.getlist('models')),
