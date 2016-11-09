@@ -370,7 +370,14 @@ class HaystackResultsAdmin(object):
             except Exception:
                 pass
 
-            query_analysis = es.indices.analyze(index="haystack", text=query, field=query_field, explain=False)
+            if field_mapping and 'search_analyzer' in field_mapping[content_field]:
+                analyzer = field_mapping[content_field]['search_analyzer']
+                query_analysis = es.indices.analyze(index="haystack", text=query, analyzer=analyzer, explain=False)
+            elif field_mapping and 'analyzer' in field_mapping[content_field]:
+                analyzer = field_mapping[content_field]['analyzer']
+                query_analysis = es.indices.analyze(index="haystack", text=query, analyzer=analyzer, explain=False)
+            else:
+                query_analysis = es.indices.analyze(index="haystack", text=query, field=query_field, explain=False)
 
         wrapped_facets = FacetWrapper(
             sqs.facet_counts(), querydict=form.cleaned_data_querydict.copy())
@@ -392,6 +399,7 @@ class HaystackResultsAdmin(object):
             'filtered': True,
             'form': form,
             'query_analysis': query_analysis,
+            'analyzer': analyzer,
             'field_mapping': field_mapping,
             'form_valid': form.is_valid(),
             'query_string': self.get_current_query_string(request, remove=[page_var]),

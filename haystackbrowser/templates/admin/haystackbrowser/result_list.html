@@ -45,6 +45,7 @@
     <div style="display: inline-block">
         <h3>Query breakdown</h3>
         {{ request.GET.q }}<br/>
+        Analyzer: {{ analyzer }}<br/>
         {% format_json_to_html query_analysis as query_analysis_html %}
         <div>{{ query_analysis_html|safe }}</div>
         <br/>
