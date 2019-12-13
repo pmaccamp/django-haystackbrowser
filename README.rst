@@ -2,11 +2,9 @@
 .. _Haystack: http://www.haystacksearch.org/
 .. _Django administration: https://docs.djangoproject.com/en/dev/ref/contrib/admin/
 .. _GitHub: https://github.com/
-.. _git: http://git-scm.com/
 .. _PyPI: http://pypi.python.org/pypi
 .. _kezabelle/django-haystackbrowser: https://github.com/kezabelle/django-haystackbrowser/
 .. _master: https://github.com/kezabelle/django-haystackbrowser/tree/master
-.. _develop: https://github.com/kezabelle/django-haystackbrowser/tree/develop
 .. _issue tracker: https://github.com/kezabelle/django-haystackbrowser/issues/
 .. _my Twitter account: https://twitter.com/kezabelle/
 .. _FreeBSD: http://en.wikipedia.org/wiki/BSD_licenses#2-clause_license_.28.22Simplified_BSD_License.22_or_.22FreeBSD_License.22.29
@@ -14,10 +12,12 @@
 .. _David Novakovic: http://blog.dpn.name/
 .. _Francois Lebel: http://flebel.com/
 .. _Jussi Räsänen: http://skyred.fi/
+.. _Michaël Krens: https://github.com/michi88/
 .. _REPL to inspect the SearchQuerySet: http://django-haystack.readthedocs.org/en/latest/debugging.html#no-results-found-on-the-web-page
 .. _ticket 21056: https://code.djangoproject.com/ticket/21056
 .. _tagged on GitHub: https://github.com/kezabelle/django-haystackbrowser/tags
 .. _my laziness: https://github.com/kezabelle/django-haystackbrowser/issues/6
+.. _Anton Shurashov: https://github.com/Sinkler/
 
 .. title:: About
 
@@ -26,7 +26,7 @@ django-haystackbrowser
 
 :author: Keryn Knight
 
-.. |travis_stable| image:: https://travis-ci.org/kezabelle/django-haystackbrowser.svg?branch=0.6.1
+.. |travis_stable| image:: https://travis-ci.org/kezabelle/django-haystackbrowser.svg?branch=0.6.3
   :target: https://travis-ci.org/kezabelle/django-haystackbrowser/branches
 
 .. |travis_master| image:: https://travis-ci.org/kezabelle/django-haystackbrowser.svg?branch=master
@@ -35,9 +35,12 @@ django-haystackbrowser
 ==============  ======
 Release         Status
 ==============  ======
-stable (0.6.1)  |travis_stable|
+stable (0.6.3)  |travis_stable|
 master          |travis_master|
 ==============  ======
+
+.. contents:: Sections
+    :depth: 2
 
 In brief
 --------
@@ -59,6 +62,55 @@ This application, a minor abuse of the `Django administration`_, aims to solve t
 by providing a familiar interface in which to query and browse the data, in a
 developer-friendly way.
 
+.. _requirements:
+
+Requirements and dependencies
+-----------------------------
+
+django-haystackbrowser should hopefully run on:
+
+  * **Django 1.3.1** or higher;
+  * **Haystack 1.2** or higher (including **2.x**)
+
+It additionally depends on ``django-classy-tags``, though only to use the provided
+template tags, which are entirely optional.
+
+Supported versions
+^^^^^^^^^^^^^^^^^^
+
+In theory, the below should work, based on a few minimal sanity-checking
+tests; if any of them don't, please open a ticket on the `issue tracker`_.
+
++--------+-------------------------------------+
+| Django | Python                              |
++--------+-------+-----+-------+-------+-------+
+|        | 2.7   | 3.3 | 3.4   | 3.5   | 3.6   |
++--------+-------+-----+-------+-------+-------+
+| 1.3.x  | Yup   |     |       |       |       |
++--------+-------+-----+-------+-------+-------+
+| 1.4.x  | Yup   |     |       |       |       |
++--------+-------+-----+-------+-------+-------+
+| 1.5.x  | Yup   | Yup |       |       |       |
++--------+-------+-----+-------+-------+-------+
+| 1.6.x  | Yup   | Yup | Yup   |       |       |
++--------+-------+-----+-------+-------+-------+
+| 1.7.x  | Yup   | Yup | Yup   |       |       |
++--------+-------+-----+-------+-------+-------+
+| 1.8.x  | Yup   | Yup | Yup   | Yup   |       |
++--------+-------+-----+-------+-------+-------+
+| 1.9.x  | Yup   |     | Yup   | Yup   |       |
++--------+-------+-----+-------+-------+-------+
+| 1.10.x | Maybe |     | Maybe | Yup   | Maybe |
++--------+-------+-----+-------+-------+-------+
+| 1.11.x | Maybe |     | Maybe | Yup   | Maybe |
++--------+-------+-----+-------+-------+-------+
+| 2.0.x  |       |     | Maybe | Maybe | Yup   |
++--------+-------+-----+-------+-------+-------+
+
+Any instances of **Maybe** are because I haven't personally used it on that,
+version, nor have I had anyone report problems with it which would indicate a
+lack of support.
+
 What it does
 ------------
 
@@ -67,8 +119,6 @@ must be ``True``) has a new application available in the standard admin index.
 
 There are two views, an overview for browsing and searching, and another for
 inspecting the data found for an individual object.
-
-.. _the_views:
 
 List view
 ^^^^^^^^^
@@ -113,21 +163,6 @@ up the stored data view, which is the most useful part of it.
 The stored data view, like the list view, provides links to the relevant admin
 pages for the app/model/instance if appropriate.
 
-.. _requirements:
-
-Requirements and dependencies
------------------------------
-
-django-haystackbrowser should hopefully run on:
-
-  * **Django 1.3.1** or higher;
-  * **Haystack 1.2** or higher (including **2.x**!)
-
-It additionally depends on ``django-classy-tags``, though only to use the provided
-template tags, which are entirely optional.
-
-.. _installation:
-
 Installation
 ------------
 
@@ -140,7 +175,7 @@ Using pip
 The best way to grab the package is using ``pip`` to grab latest release from
 `PyPI`_::
 
-    pip install django-haystackbrowser==0.6.1
+    pip install django-haystackbrowser==0.6.3
 
 The alternative is to use ``pip`` to install the master branch in ``git``::
 
@@ -148,9 +183,9 @@ The alternative is to use ``pip`` to install the master branch in ``git``::
 
 Any missing dependencies will be resolved by ``pip`` automatically.
 
-If you want the last release (0.6.1), such as it is, you can do::
+If you want the last release (0.6.3), such as it is, you can do::
 
-    pip install git+https://github.com/kezabelle/django-haystackbrowser.git@0.6.1#egg=django-haystackbrowser
+    pip install git+https://github.com/kezabelle/django-haystackbrowser.git@0.6.3#egg=django-haystackbrowser
 
 You can find all previous releases `tagged on GitHub`_
 
@@ -162,8 +197,6 @@ If you're not using ``pip``, you can get the latest version::
     git clone https://github.com/kezabelle/django-haystackbrowser.git
 
 and then make sure the ``haystackbrowser`` package is on your python path.
-
-.. _usage:
 
 Usage
 -----
@@ -218,8 +251,6 @@ templates and adapt them for your own needs.
     and access to the ``original`` object being edited, so nothing will appear on
     the add screens.
 
-.. _contributing:
-
 Contributing
 ------------
 
@@ -233,7 +264,7 @@ Bug reports and feature requests can be filed on the repository's `issue tracker
 If something can be discussed in 140 character chunks, there's also `my Twitter account`_.
 
 Contributors
-------------
+^^^^^^^^^^^^
 
 The following people have been of help, in some capacity.
 
@@ -244,6 +275,8 @@ The following people have been of help, in some capacity.
  * `Francois Lebel`_, for various fixes.
  * `Jussi Räsänen`_, for various fixes.
  * Vadim Markovtsev, for minor fix related to Django 1.8+.
+ * `Michaël Krens`_, for various fixes.
+ * `Anton Shurashov`_, for fixes related to Django 2.0.
 
 TODO
 ----

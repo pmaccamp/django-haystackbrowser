@@ -3,10 +3,14 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import division
+import django
 import pytest
 from functools import partial
 from django.conf import settings
-from django.core.urlresolvers import reverse, resolve
+try:
+    from django.core.urlresolvers import reverse, resolve
+except ImportError:  # >= Django 2.0
+    from django.urls import reverse, resolve
 from haystack.exceptions import SearchBackendError
 from haystackbrowser.admin import Search404
 from haystackbrowser.forms import PreSelectedModelSearchForm
@@ -29,6 +33,17 @@ def detailview(admin_user, rf):
     yield partial(match.func, request, *match.args, **match.kwargs)
 
 
+def test_views_resolve_correctly():
+    list_url = reverse('admin:haystackbrowser_haystackresults_changelist')
+    detail_url = reverse('admin:haystackbrowser_haystackresults_change',
+                  kwargs={'content_type': 1, 'pk': 1})
+    assert list_url == '/admin/haystackbrowser/haystackresults/'
+    assert detail_url == '/admin/haystackbrowser/haystackresults/1/1/'
+    list_view = resolve(list_url)
+    detail_view = resolve(detail_url)
+
+
+
 def test_detailview_has_view_result_but_fails_because_mlt(mocker, detailview):
     """
     Gets as far as:
@@ -49,7 +64,8 @@ def test_detailview_has_view_result_templateresponse(mocker, detailview):
     from django.template.response import TemplateResponse
     assert isinstance(response, TemplateResponse) is True
     assert response.status_code == 200
-    assert sorted(response.context_data.keys()) == [
+    context_keys = set(response.context_data.keys())
+    assert context_keys.issuperset({
         'app_label',
         'form',
         'form_valid',
@@ -60,7 +76,13 @@ def test_detailview_has_view_result_templateresponse(mocker, detailview):
         'original',
         'similar_objects',
         'title'
-    ]
+    })
+    if django.VERSION[0:2] >= (1, 7):
+        assert 'site_header' in context_keys
+        assert 'site_title' in context_keys
+    else:
+        assert 'site_header' not in context_keys
+        assert 'site_title' not in context_keys
     assert response.context_data['form_valid'] is False
     assert response.context_data['has_change_permission'] is True
     assert len(response.context_data['similar_objects']) == 2
@@ -97,3 +119,15 @@ def test_detailview_no_result(mocker, detailview):
     mocker.patch('haystack.query.SearchQuerySet.filter').return_value = []
     with pytest.raises(Search404):
         detailview()
+
+
+def test_GH15_detailview_mlt_attributeerror_is_handled(mocker, detailview):
+    mocker.patch('haystack.query.SearchQuerySet.filter').return_value = [mocker.Mock()]
+    msg = "MLT failed because the haystack ES1 backend is using the 2.x " \
+          "version of elasticsearch-py which does not have a .mlt method"
+    mocker.patch('haystack.query.SearchQuerySet.more_like_this').side_effect = AttributeError(msg)
+    # Refs #GH-15 - calling .more_like_this(...) should raise an AttributeError
+    # to emulate the ES1-haystack-backend with ES2.x library situation, but
+    # it should not be promoted to a userland exception and should instead
+    # be silenced...
+    detailview()
