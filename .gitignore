@@ -9,3 +9,5 @@ db.sqlite3
 .tox
 htmlcov/
 django-haystackbrowser-0.*.*
+.idea/
+build/
