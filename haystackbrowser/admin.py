@@ -115,6 +115,7 @@ class HaystackResultsAdmin(object):
     list_select_related = False
     save_as = False
     save_on_top = False
+    inlines = []
 
     def __init__(self, model, admin_site):
         self.model = model
